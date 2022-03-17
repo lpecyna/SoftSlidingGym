@@ -2014,6 +2014,7 @@ void UpdateFrame(py::array_t<float> update_params) {
 
         // real elapsed frame time
         double frameBeginTime = GetSeconds();
+        
 
         g_realdt = float(frameBeginTime - lastTime);
         lastTime = frameBeginTime;

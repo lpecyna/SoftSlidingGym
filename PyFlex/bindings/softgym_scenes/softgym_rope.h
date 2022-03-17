@@ -38,6 +38,7 @@ public:
 		cam_width = int(ptr[15]);
 		cam_height = int(ptr[16]);
 		// int render = int(ptr[15]);
+		//cout << ptr[18] << endl;
 
 
 		int group = 0;
@@ -55,9 +56,9 @@ public:
 
 	   	g_params.radius = radius;
 		g_params.numIterations = 4;
-		g_params.dynamicFriction = 1.0f;
+		g_params.dynamicFriction = ptr[18];//0.2f;//1.0f;
 		// g_params.staticFriction = 0.8f;
-		g_params.collisionDistance = 0.001f;
+		g_params.collisionDistance = 0.005f;//0.001f;
 		
 		g_maxDiffuseParticles = 64*1024;
 		g_diffuseScale = 0.25f;		
@@ -74,12 +75,18 @@ public:
 
 		// draw options		
 		g_drawEllipsoids = false;
-		g_drawPoints = false;
+		g_drawPoints = false;//true;//false;
 		g_drawDiffuse = false;
 		g_drawSprings = 0;
 
 		g_ropeScale = scale;
 		g_warmup = false;
+
+		//added
+		//g_params.damping = 1.0f;
+		//g_params.sleepThreshold = 0.0f;
+		//g_params.dynamicFriction = 0.0f;
+    	//g_params.staticFriction = 0.0f;
 	}
 
     virtual void CenterCamera(void)

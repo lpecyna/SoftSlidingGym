@@ -48,7 +48,7 @@ class RopeNewEnv(FlexEnv):
         """ Set the default config of the environment and load it to self.config """
         config = {
             'init_pos': [0., 0., 0.],
-            'stretchstiffness': 0.9,
+            'stretchstiffness': 1.5,#0.9,
             'bendingstiffness': 0.8,
             'radius': 0.025,
             'segment': 40,

@@ -19,3 +19,19 @@ PyFlex/bindings/examples/*/
 PyFlex/bindings/examples/*.gif
 
 build/
+/0.gif
+/21.gif
+/cartpole-v0.gif
+/cartpole-v0_1.gif
+/softgym/envs/my_rope_env_Arch2.py
+/softgym/envs/my_rope_env_ArchV0.py
+/softgym/envs/my_rope_env_new.py
+/softgym/action_space/my_action_space_sp.py
+/softgym/action_space/my_action_space.py
+/softgym/action_space/my_action_space_capsule.py
+/softgym/action_space/my_action_space_capsule_Archv0.py
+/softgym/action_space/my_action_space_capsule_exp.py
+/softgym/action_space/my_action_space_capsule_nFriction.py
+/softgym/action_space/my_action_space_capsule_nFriction0.py
+/softgym/action_space/my_action_space_capsule_nFriction1.py
+/softgym/action_space/my_action_space_capsule_nFriction2.py

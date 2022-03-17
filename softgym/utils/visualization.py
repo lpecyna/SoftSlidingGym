@@ -38,7 +38,7 @@ if __name__ == '__main__':
     cv2.waitKey()
 
 
-def save_numpy_as_gif(array, filename, fps=20, scale=1.0):
+def save_numpy_as_gif(array, filename, fps=50, scale=1.0): #fps=20 original
     """Creates a gif given a stack of images using moviepy
     Notes
     -----

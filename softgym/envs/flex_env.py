@@ -57,6 +57,7 @@ class FlexEnv(gym.Env):
         self.dim_shape_state = 14
         self.particle_num = 0
         self.eval_flag = False
+        self.done = False
 
         # version 1 does not support robot, while version 2 does.
         pyflex_root = os.environ['PYFLEXROOT']
@@ -151,9 +152,11 @@ class FlexEnv(gym.Env):
         del self.video_frames
 
     def reset(self, config=None, initial_state=None, config_id=None):
+        #print("CALLING RESET!-----------")
         if config is None:
             if config_id is None:
                 if self.eval_flag:
+                    print("EVAL_FLAT: ", self.eval_flag)
                     eval_beg = int(0.8 * len(self.cached_configs))
                     config_id = np.random.randint(low=eval_beg, high=len(self.cached_configs)) if not self.deterministic else eval_beg
                 else:
@@ -176,6 +179,7 @@ class FlexEnv(gym.Env):
 
     def step(self, action, record_continuous_video=False, img_size=None):
         """ If record_continuous_video is set to True, will record an image for each sub-step"""
+        #print("step: ",self.time_step)
         frames = []
         for i in range(self.action_repeat):
             self._step(action)
@@ -183,17 +187,29 @@ class FlexEnv(gym.Env):
                 frames.append(self.get_image(img_size, img_size))
         obs = self._get_obs()
         reward = self.compute_reward(action, obs, set_prev_reward=True)
-        info = self._get_info()
+        #info = self._get_info()  # moved below
 
         if self.recording:
             self.video_frames.append(self.render(mode='rgb_array'))
         self.time_step += 1
 
+        info = self._get_info()
+
         done = False
         if self.time_step >= self.horizon:
             done = True
+            #print("DONE_HORIZON!!!!!!!!!!!!!!!!!", self.time_step)
+            #print(info)
+        if self.done == True:
+            done = True
+            #print("DONE!!!!!!!!!!!!!!!!!", self.time_step)
+            #print(info)
+            self.done = False
         if record_continuous_video:
             info['flex_env_recorded_frames'] = frames
+
+        #print("Reward inside: ", reward)
+        #print("Obs inside: ", obs)
         return obs, reward, done, info
 
     def initialize_camera(self):
