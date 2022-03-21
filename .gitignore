@@ -35,3 +35,4 @@ build/
 /softgym/action_space/my_action_space_capsule_nFriction0.py
 /softgym/action_space/my_action_space_capsule_nFriction1.py
 /softgym/action_space/my_action_space_capsule_nFriction2.py
+/softgym/cached_initial_states/*
