@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import os.path as osp
 import pyflex
-from softgym.envs.my_rope_env import RopeNewEnv
+from softgym.envs.rope_sliding_env import RopeNewEnv
 from copy import deepcopy
 from softgym.utils.pyflex_utils import random_pick_and_place2, center_object, center_first
 

@@ -152,7 +152,6 @@ class FlexEnv(gym.Env):
         del self.video_frames
 
     def reset(self, config=None, initial_state=None, config_id=None):
-        #print("CALLING RESET!-----------")
         if config is None:
             if config_id is None:
                 if self.eval_flag:
@@ -179,7 +178,6 @@ class FlexEnv(gym.Env):
 
     def step(self, action, record_continuous_video=False, img_size=None):
         """ If record_continuous_video is set to True, will record an image for each sub-step"""
-        #print("step: ",self.time_step)
         frames = []
         for i in range(self.action_repeat):
             self._step(action)

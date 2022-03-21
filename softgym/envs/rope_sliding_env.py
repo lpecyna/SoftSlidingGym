@@ -1,8 +1,8 @@
 import numpy as np
 from gym.spaces import Box
 import pyflex
-from softgym.envs.flex_env import FlexEnv
-from softgym.action_space.my_action_space_capsule_nFriction3 import Picker##########
+from softgym.envs.flex_variant_env import FlexEnv
+from softgym.action_space.action_space_sliding import Picker  # modified - using sliding action space
 from softgym.action_space.robot_env import RobotBase
 from copy import deepcopy
 
@@ -10,7 +10,7 @@ from copy import deepcopy
 class RopeNewEnv(FlexEnv):
     def __init__(self, observation_mode, action_mode, num_picker=2, horizon=75, render_mode='particle', picker_size=[0.02, 0.01, 0.04], **kwargs):
         self.render_mode = render_mode
-        self.particle_radius = 0.004*2 # rope is half of that radius (see scale)
+        self.particle_radius = 0.004*2  # rope is half of that radius (see scale)
         super().__init__(**kwargs)
 
         assert observation_mode in ['point_cloud', 'cam_rgb', 'key_point']
@@ -20,7 +20,7 @@ class RopeNewEnv(FlexEnv):
         self.num_picker = num_picker
 
         if action_mode == 'picker':
-            self.action_tool = Picker(num_picker, picker_radius=0.02, picker_threshold=self.particle_radius/2, #picker_size=picker_size
+            self.action_tool = Picker(num_picker, picker_radius=0.02, picker_threshold=self.particle_radius/2,  # picker_size=picker_size
             particle_radius=self.particle_radius, picker_low=(-0.35, 0., -0.35), picker_high=(0.35, 0.3, 0.35))
             self.action_space = self.action_tool.action_space
         elif action_mode in ['sawyer', 'franka']:
@@ -28,13 +28,13 @@ class RopeNewEnv(FlexEnv):
 
         if observation_mode in ['key_point', 'point_cloud']:
             if observation_mode == 'key_point':
-                obs_dim = 4+2#+2+4  # 2+4
+                obs_dim = 4+2  # 2+4  # This has to be modified when changing the inputs
             else:
                 max_particles = 41
                 obs_dim = max_particles * 3
                 self.particle_obs_dim = obs_dim
             if action_mode in ['picker']:
-                obs_dim += num_picker * 4# 4  # 3
+                obs_dim += num_picker * 4  # 4 # This has to be modified when changing the inputs
             else:
                 raise NotImplementedError
             self.observation_space = Box(np.array([-np.inf] * obs_dim), np.array([np.inf] * obs_dim), dtype=np.float32)
