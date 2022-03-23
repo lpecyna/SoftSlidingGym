@@ -1,9 +1,9 @@
 import abc
 import numpy as np
 from gym.spaces import Box
-from softgym.utils.misc import rotation_2d_around_center, extend_along_center
+# from softgym.utils.misc import rotation_2d_around_center, extend_along_center
 import pyflex
-import scipy.spatial
+# import scipy.spatial
 
 
 class ActionToolBase(metaclass=abc.ABCMeta):
@@ -30,8 +30,7 @@ class Picker(ActionToolBase):
         """
 
         super(Picker).__init__()
-        #self.old_pos = []
-        #self.particles = [0]
+        print(picker_size)
         self.grasp = 0
         self.picker_size = picker_size
         self.picker_threshold = picker_threshold
@@ -41,15 +40,14 @@ class Picker(ActionToolBase):
         self.init_pos = init_pos
         self.particle_radius = particle_radius
         self.init_particle_pos = init_particle_pos
-        #print(init_particle_pos)
         self.spring_coef = spring_coef  # Prevent picker to drag two particles too far away
 
-        #space_low = np.array([-0.1, -0.1, -0.1, 0] * self.num_picker) * 0.1  # [dx, dy, dz, [0, 1]]
-        #space_low = np.array([-0.05, -0.05, 0] * self.num_picker) * 0.1  # [dx,dz]
+        # For velocity scaling:
         space_low = np.array([-0.025, -0.025, 0] * self.num_picker) * 0.1  # [dx,dz]
-        #space_high = np.array([0.1, 0.1, 0.1, 10] * self.num_picker) * 0.1
-        #space_high = np.array([0.05, 0.05, 10] * self.num_picker) * 0.1
         space_high = np.array([0.025, 0.025, 10] * self.num_picker) * 0.1
+        # Original from SoftGym:
+        # space_low = np.array([-0.1, -0.1, -0.1, 0] * self.num_picker) * 0.1  # [dx, dy, dz, [0, 1]]
+        # space_high = np.array([0.1, 0.1, 0.1, 10] * self.num_picker) * 0.1
         self.action_space = Box(space_low, space_high, dtype=np.float32)
 
     def update_picker_boundary(self, picker_low, picker_high):
@@ -66,12 +64,10 @@ class Picker(ActionToolBase):
         for i in range(3):
             #clipped_picker_pos[i] = np.clip(picker_pos[i], self.picker_low[i] + self.picker_size[0], self.picker_high[i] - self.picker_size[1])
             clipped_picker_pos[i] = np.clip(picker_pos[i], self.picker_low[i], self.picker_high[i])
-            #print("X",i,": ",self.picker_low[i] + self.picker_size[0]," to: ", self.picker_high[i] - self.picker_size[1])
         return clipped_picker_pos
 
     def _get_centered_picker_pos(self, center):
         #r = np.sqrt(self.num_picker - 1) * self.picker_radius * 2.
-        #r = np.sqrt(self.num_picker - 1) * (self.picker_size[0] + self.picker_size[2]) * 2.
         r = np.sqrt(self.num_picker - 1) * (self.picker_size[0] + self.picker_size[1]) * 2.
         pos = []
         for i in range(self.num_picker):
@@ -79,21 +75,16 @@ class Picker(ActionToolBase):
             y = center[1]
             z = center[2] + np.cos(2 * np.pi * i / self.num_picker) * r
             pos.append([x, y, z])
-            pos.append([x, y, z])###################
+            pos.append([x, y, z])
         return np.array(pos)
 
     def reset(self, center):
         for i in (0, 2):
-            #offset = center[i] - (self.picker_high[i] + self.picker_low[i]) / 2.
             self.picker_low[i] = -0.3#+= offset
             self.picker_high[i] = 0.3#+= offset
-            #print(self.picker_high[i])
-            #print(self.picker_low[i])
-        init_picker_poses = [center, center]#self._get_centered_picker_pos(center)
-        #print("Init_picker: ", init_picker_poses)
+        init_picker_poses = [center, center]
         self.quat = [0, 0.70710677, 0, -0.70710677]
         for picker_pos in init_picker_poses:
-            #pyflex.add_sphere(self.picker_radius, picker_pos, [1, 0, 0, 0])
             pyflex.add_capsule(self.picker_size, picker_pos, self.quat)
 
         pos = pyflex.get_shape_states()  # Need to call this to update the shape collision
@@ -104,28 +95,19 @@ class Picker(ActionToolBase):
         centered_picker_pos = self._get_centered_picker_pos(center)
 
         curr_pos = pyflex.get_positions().reshape(-1, 4)
-        #print(np.shape(curr_pos))
 
         if curr_pos[0, 1] > self.picker_size[1]:
-            centered_picker_pos = curr_pos[0, 0:3] + [[-0.008, -0.019, 0], [-0.008, 0.0145, 0]]##############[curr_pos[0,0:3] + [-0.007, -0.035, 0]] #
-            #print(centered_picker_pos)
+            centered_picker_pos = curr_pos[0, 0:3] + [[-0.008, -0.019, 0], [-0.008, 0.0145, 0]]
 
         if curr_pos[0, 1] > self.picker_size[1]:
-            #print("yes")
             new = [0, 0, 0, -1]
         else:
-            #new = [0, 0, 0, -1]
             new = self.quat
         for (i, centered_picker_pos) in enumerate(centered_picker_pos):
-            #shape_state[i] = np.hstack([centered_picker_pos, centered_picker_pos, [1, 0, 0, 0], [1, 0, 0, 0]])
             shape_state[i] = np.hstack([centered_picker_pos, centered_picker_pos, [0, 0.70710677, 0, -0.70710677], [0, 0.70710677, 0, -0.70710677]])
-            #shape_state[i] = np.hstack([centered_picker_pos, centered_picker_pos, self.quat, new])
             self.quat=new
         pyflex.set_shape_states(shape_state)
-        #print(shape_state)
-        # pyflex.step() # Remove this as having an additional step here may affect the cloth drop env
         self.particle_inv_mass = pyflex.get_positions().reshape(-1, 4)[:, 3]
-        # print('inv_mass_shape after reset:', self.particle_inv_mass.shape)
 
     @staticmethod
     def _get_pos():
@@ -139,26 +121,6 @@ class Picker(ActionToolBase):
         shape_states = np.array(pyflex.get_shape_states()).reshape(-1, 14)
         shape_states[:, 3:6] = shape_states[:, :3]
         shape_states[:, :3] = picker_pos
-
-        """
-        #added:
-        quat = shape_states[:, 6:10]
-        #print("quat:")
-        #print(quat)
-        shape_states[:, 10:] = quat
-        quat1 = np.array([[0., 1., 0., 0.]])
-        new_quat = quat1 * 1;
-
-        ang = 2 * np.arctan2(quat1[0,1],quat1[0,3])
-        #print(ang * 180 / np.pi)
-        ang += 90/180*np.pi
-        #print(ang * 180 / np.pi)
-        new_quat[0,1] = np.sin(ang/2)
-        new_quat[0,3] = np.cos(ang/2)
-
-        shape_states[:, 6:10] = new_quat
-        #end added
-        """
         pyflex.set_shape_states(shape_states)
         pyflex.set_positions(particle_pos)
 
@@ -176,54 +138,19 @@ class Picker(ActionToolBase):
         2. Update picker pos
         3. Update picked particle pos
         """
-        action = np.reshape(action, [-1, 3])#4])#if two pickers then [[x' y' z' h][x' y' z, h]]
-        #print(action)
-        # pick_flag = np.random.random(self.num_picker) < action[:, 3]
+        action = np.reshape(action, [-1, 3])  # if two pickers then [[x' y' z' h][x' y' z, h]]
 
-        pick_flag = action[:, 2] > 0.5 #checking if grip (h) is higher than 0.5
+        pick_flag = action[:, 2] > 0.5  # checking if grip (h) is higher than 0.5
 
         picker_pos, particle_pos = self._get_pos()
         new_picker_pos, new_particle_pos = picker_pos.copy(), particle_pos.copy()
 
         # Un-pick the particles
-        # print('check pick id:', self.picked_particles, new_particle_pos.shape, self.particle_inv_mass.shape)
         for i in range(self.num_picker):
-            #if not pick_flag[i] and self.picked_particles[i] is not None: #when it is not holding and there are some particles
             if self.picked_particles[i] is not None:  # when it is not holding and there are some particles
                 new_particle_pos[self.picked_particles[i], 3] = self.particle_inv_mass[self.picked_particles[i]]  # Revert the mass
                 self.picked_particles[i] = None
-        """
-        #dists = scipy.spatial.distance.cdist(picker_pos[i].reshape((-1, 3)), particle_pos[:, :3].reshape((-1, 3)))
-        # calculate new distance:
-        p0 = picker_pos[i].reshape((-1, 3))
-        p1 = p0+np.array([0, 0, self.picker_size[1]]) #  if I change the orientation the added element need to be oriented
-        p2 = p0 + np.array([0, 0, -self.picker_size[1]]) #  if I change the orientation the added element need to be oriented
-        p3 = particle_pos[:, :3].reshape((-1, 3))
-        dists = np.linalg.norm(np.cross(p2 - p1, p3 - p1) / np.linalg.norm(p2 - p1), axis=1)
-        #print("new distance")
-        #print(dists2)
-        l2 = np.sum((p1 - p2) ** 2)
-        t = np.sum((p3 - p1) * (p2 - p1), axis=1) / l2
-        #print("Print t:")
-        #print(t)
-        mask = (t < np.ones(np.shape(t)))*(t > np.zeros(np.shape(t)))*(dists < 0.031*np.ones(np.shape(t)))
-        #print(mask)
-        sel_2D_points = p3[mask][:, [0, 2]]
-        self.sel_points = np.array(range(np.shape(p3)[0]))[mask]
-        #print(self.sel_points)
-        #print(sel_2D_points)
-        if np.shape(sel_2D_points)[0]>1:
-            coef = np.polyfit(sel_2D_points[:, 0], sel_2D_points[:, 1], 1)
-            #print(coef)
-            #print(p0)
-            yl = coef[0]*p0[0, 0]+coef[1]
-            Y = yl-p0[0, 2]
-            th = -np.arctan(coef[0])
-            #print("Position y: ", Y, ", Angle theta: ", th*180/np.pi)
-
-        """
         # Pick new particles and update the mass and the positions
-        #print(action)
         action_real = np.zeros([np.shape(action)[0], 3])
         action_real[:, 0] = action[:, 0]
         action_real[:, 1] = 0
@@ -235,20 +162,10 @@ class Picker(ActionToolBase):
             new_picker_pos[i+1, :] = self._apply_picker_boundary(picker_pos[i+1, :] + action_real[i, :3])###########
             if pick_flag[i]:
                 #print("YES Pick")
-                if self.picked_particles[i] is None:  # No particle is currently picked and thus need to select a particle to pick
-                    #dists = scipy.spatial.distance.cdist(picker_pos[i].reshape((-1, 3)), particle_pos[:, :3].reshape((-1, 3)))
-                    #idx_dists = np.hstack([np.arange(particle_pos.shape[0]).reshape((-1, 1)), dists.reshape((-1, 1))])
-                    #mask1 = dists.flatten() <= self.picker_threshold + self.picker_size[0] + self.particle_radius# + self.picker_radius + self.particle_radius
-                    #should be distance to line as mask1 not to point and conditions that is not farther than something from centre
-                    #mask2 = particle_pos[:, 1] > picker_pos[i][1] + self.picker_size[0]
-                    #mask = np.logical_and(mask1, mask2)
-                    #idx_dists = idx_dists[mask, :].reshape((-1, 2))
-                    #print("self.picker_threshold: ", self.picker_threshold)
+                if self.picked_particles[i] is None:
                     idx = self.get_hold_idx(picker_pos[i].reshape((-1, 3)), particle_pos[:, :3].reshape((-1, 3)))
                     #distance to axes:
                     dist_ax = abs(particle_pos[idx, 0]-picker_pos[i].reshape((-1, 3))[0, 0])
-                    #print("Distance ax:", dist_ax)
-                    #print(mask)
 
                     if idx.shape[0] > 0:
                         pick_id, pick_height = None, None
@@ -264,33 +181,23 @@ class Picker(ActionToolBase):
                     # TODO1 The position of the particle needs to be updated such that it is close to the picker particle
                     new_particle_pos[self.picked_particles[i], :3] = particle_pos[self.picked_particles[i], :3] + new_picker_pos[i, :] - picker_pos[i,
                                                                                                                                          :]
-                    #print(action)
-                    #coef = (max(0.5, action[0, 2]) - 0.5) * 2
-                    #new_particle_pos[self.picked_particles[i], 3] = 2/(1+max(0, (action[0, 2]-0.5)*400))  # Set the mass to infinity
                     new_particle_pos[self.picked_particles[i], 3] = max(4.5 - 5 * max(0.5, action[0, 2]), 0)
-                    #print(new_particle_pos[self.picked_particles[i], 3])
 
 
         # check for e.g., rope, the picker is not dragging the particles too far away that violates the actual physicals constraints.
-        #print("Picked particles: ", self.picked_particles)
-        #print("init particles: ", self.init_particle_pos)
-        #nominal distance between particles:
-        #print("nominal distance: ", 0.5*config['radius'])
-        #print(particle_pos[config['segment']-1, :3])
-        #print(particle_pos[config['segment'], :3])
         if self.picked_particles[0] is not None:
             i = self.picked_particles[0]
             violated = False
             if i > 0:
                 now_distance = np.linalg.norm(new_particle_pos[i, :3] -
                                           new_particle_pos[i-1, :3])
-                #print(now_distance)
+
                 if now_distance > 2.5*0.5*config['radius']:
                     violated = True
             if i < config['segment']:
                 now_distance = np.linalg.norm(new_particle_pos[i, :3] -
                                               new_particle_pos[i + 1, :3])
-                #print(now_distance)
+
                 if now_distance > 2.5*0.5*config['radius']:
                     violated = True
             if violated:
@@ -329,205 +236,9 @@ class Picker(ActionToolBase):
         # Checking if the point projection is on the segment
         l2 = np.sum((p1 - p2) ** 2)
         t = np.sum((p3 - p1) * (p2 - p1), axis=1) / l2
-        # print("Print t:")
-        # print(t)
         max_dist = self.picker_threshold + self.picker_size[0] + self.particle_radius
-        #print(max_dist)
         mask1 = (t < np.ones(np.shape(t))) * (t > np.zeros(np.shape(t))) * (dists < max_dist* np.ones(np.shape(t)))
         mask2 = particle_pos[:, 1] > picker_pos[0][1] + self.picker_size[0]
         mask = np.logical_and(mask1, mask2)
         sel_points = np.array(range(np.shape(p3)[0]))[mask]
-        #print(sel_points)
-        #print(p3[sel_points, :])
         return sel_points
-
-
-
-class PickerPickPlace(Picker):
-    def __init__(self, num_picker, env=None, picker_low=None, picker_high=None, **kwargs):
-        super().__init__(num_picker=num_picker,
-                         picker_low=picker_low,
-                         picker_high=picker_high,
-                         **kwargs)
-        picker_low, picker_high = list(picker_low), list(picker_high)
-        self.action_space = Box(np.array([*picker_low, 0.] * self.num_picker),
-                                np.array([*picker_high, 1.] * self.num_picker), dtype=np.float32)
-        self.delta_move = 0.01
-        self.env = env
-
-    def step(self, action):
-        """
-        action: Array of pick_num x 4. For each picker, the action should be [x, y, z, pick/drop]. The picker will then first pick/drop, and keep
-        the pick/drop state while moving towards x, y, x.
-        """
-        total_steps = 0
-        action = action.reshape(-1, 4)
-        curr_pos = np.array(pyflex.get_shape_states()).reshape(-1, 14)[:, :3]
-        end_pos = np.vstack([self._apply_picker_boundary(picker_pos) for picker_pos in action[:, :3]])
-        dist = np.linalg.norm(curr_pos - end_pos, axis=1)
-        num_step = np.max(np.ceil(dist / self.delta_move))
-        if num_step < 0.1:
-            return
-        delta = (end_pos - curr_pos) / num_step
-        norm_delta = np.linalg.norm(delta)
-        for i in range(int(min(num_step, 300))):  # The maximum number of steps allowed for one pick and place
-            curr_pos = np.array(pyflex.get_shape_states()).reshape(-1, 14)[:, :3]
-            dist = np.linalg.norm(end_pos - curr_pos, axis=1)
-            if np.alltrue(dist < norm_delta):
-                delta = end_pos - curr_pos
-            super().step(np.hstack([delta, action[:, 3].reshape(-1, 1)]))
-            pyflex.step()
-            total_steps += 1
-            if self.env is not None and self.env.recording:
-                self.env.video_frames.append(self.env.render(mode='rgb_array'))
-            if np.alltrue(dist < self.delta_move):
-                break
-        return total_steps
-
-    def get_model_action(self, action, picker_pos):
-        """Input the action and return the action used for GNN model prediction"""
-        action = action.reshape(-1, 4)
-        curr_pos = picker_pos
-        end_pos = np.vstack([self._apply_picker_boundary(picker_pos) for picker_pos in action[:, :3]])
-        dist = np.linalg.norm(curr_pos - end_pos, axis=1)
-        num_step = np.max(np.ceil(dist / self.delta_move))
-        if num_step < 0.1:
-            return [], curr_pos
-        delta = (end_pos - curr_pos) / num_step
-        norm_delta = np.linalg.norm(delta)
-        model_actions = []
-        for i in range(int(min(num_step, 300))):  # The maximum number of steps allowed for one pick and place
-            dist = np.linalg.norm(end_pos - curr_pos, axis=1)
-            if np.alltrue(dist < norm_delta):
-                delta = end_pos - curr_pos
-            super().step(np.hstack([delta, action[:, 3].reshape(-1, 1)]))
-            model_actions.append(np.hstack([delta, action[:, 3].reshape(-1, 1)]))
-            curr_pos += delta
-            if np.alltrue(dist < self.delta_move):
-                break
-        return model_actions, curr_pos
-
-
-from softgym.utils.gemo_utils import intrinsic_from_fov, get_rotation_matrix
-
-
-class PickerQPG(PickerPickPlace):
-    def __init__(self, image_size, cam_pos, cam_angle, full=True, **kwargs):
-        super().__init__(**kwargs)
-        self.image_size = image_size
-        self.cam_pos = cam_pos
-        self.cam_angle = cam_angle
-        self.action_space = Box(np.array([-1., -1, -0.3, 0., -0.3]),
-                                np.array([1., 1., *([0.3] * 3)]), dtype=np.float32)
-        assert self.num_picker == 1
-        self.full = full
-        self.total_steps = None
-
-    def _get_world_coor_from_image(self, u, v):
-        height, width = self.image_size
-        K = intrinsic_from_fov(height, width, 45)  # the fov is 90 degrees
-
-        # Apply back-projection: K_inv @ pixels * depth
-        cam_x, cam_y, cam_z = self.cam_pos
-        cam_x_angle, cam_y_angle, cam_z_angle = self.cam_angle
-
-        # get rotation matrix: from world to camera
-        matrix1 = get_rotation_matrix(- cam_x_angle, [0, 1, 0])
-        # matrix2 = get_rotation_matrix(- cam_y_angle - np.pi, [np.cos(cam_x_angle), 0, np.sin(cam_x_angle)])
-        matrix2 = get_rotation_matrix(- cam_y_angle - np.pi, [1, 0, 0])
-        rotation_matrix = matrix2 @ matrix1
-
-        # get translation matrix: from world to camera
-        translation_matrix = np.zeros((4, 4))
-        translation_matrix[0][0] = 1
-        translation_matrix[1][1] = 1
-        translation_matrix[2][2] = 1
-        translation_matrix[3][3] = 1
-        translation_matrix[0][3] = - cam_x
-        translation_matrix[1][3] = - cam_y
-        translation_matrix[2][3] = - cam_z
-        matrix = np.linalg.inv(rotation_matrix @ translation_matrix)
-
-        u0 = K[0, 2]
-        v0 = K[1, 2]
-        fx = K[0, 0]
-        fy = K[1, 1]
-        vec = ((u - u0) / fx, (v - v0) / fy)
-        depth = self._get_depth(matrix, vec, self.particle_radius)  # Height to be the particle radius
-
-        # Loop through each pixel in the image
-        # Apply equation in fig 3
-        x = (u - u0) * depth / fx
-        y = (v - v0) * depth / fy
-        z = depth
-        cam_coords = np.array([x, y, z, 1])
-        cam_coords = cam_coords.reshape((-1, 4)).transpose()  # 4 x (height x width)
-
-        world_coord = matrix @ cam_coords  # 4 x (height x width)
-        world_coord = world_coord.reshape(4)
-        return world_coord[:3]
-
-    def _get_depth(self, matrix, vec, height):
-        """ Get the depth such that the back-projected point has a fixed height"""
-        return (height - matrix[1, 3]) / (vec[0] * matrix[1, 0] + vec[1] * matrix[1, 1] + matrix[1, 2])
-
-    def reset(self, *args, **kwargs):
-        self.total_steps = 0
-        super().reset(*args, **kwargs)
-
-    def step(self, action):
-        """ Action is in 5D: (u,v) the start of the pick in image coordinate; (dx, dy, dz): the relative position of the place w.r.t. the pick"""
-        u, v = action[:2]
-        u = ((u + 1.) * 0.5) * self.image_size[0]
-        v = ((v + 1.) * 0.5) * self.image_size[1]
-        x, y, z = self._get_world_coor_from_image(u, v)
-        print(x)
-        y += 0.01
-        dx, dy, dz = action[2:]
-
-        st_high = np.array([x, 0.2, z, 0])
-        st = np.array([x, y, z, 0])
-        en = st + np.array([dx, dy, dz, 1])
-        # print('st:', st)
-        if self.full:
-            self.total_steps += super().step(st_high)
-            self.total_steps += super().step(st)
-            self.total_steps += super().step(en)
-            en[3] = 0  # Drop cloth
-            # Unpick all particles
-            _, particle_pos = self._get_pos()
-            new_particle_pos = particle_pos.copy()
-            for i in range(self.num_picker):
-                if self.picked_particles[i] is not None:
-                    new_particle_pos[self.picked_particles[i], 3] = self.particle_inv_mass[self.picked_particles[i]]  # Revert the mass
-                    self.picked_particles[i] = None
-            pyflex.set_positions(new_particle_pos)
-            for i in range(20):
-                pyflex.step()
-                if self.env is not None and self.env.recording:
-                    self.env.video_frames.append(self.env.render(mode='rgb_array'))
-            self.total_steps += 20
-        else:
-            raise NotImplementedError
-        return self.total_steps
-
-    def get_model_action(self, action, curr_pos):
-        u, v = action[:2]
-        u = ((u + 1.) * 0.5) * self.image_size[0]
-        v = ((v + 1.) * 0.5) * self.image_size[1]
-        x, y, z = self._get_world_coor_from_image(u, v)
-        y += 0.01
-        dx, dy, dz = action[2:]
-
-        st_high = np.array([x, 0.2, z, 0])
-        st = np.array([x, y, z, 0])
-        en = st + np.array([dx, dy, dz, 1])
-
-        model_actions = []
-        model_action, curr_pos = super().get_model_action(st_high, curr_pos)
-        model_actions.extend(model_action)
-        model_action, curr_pos = super().get_model_action(st, curr_pos)
-        model_actions.extend(model_action)
-        model_action, curr_pos = super().get_model_action(en, curr_pos)
-        model_actions.extend(model_action)
-        return model_actions, curr_pos
