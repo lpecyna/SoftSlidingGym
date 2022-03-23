@@ -23,12 +23,17 @@ Create a conda environment and activate it: `conda env create -f environment.yml
 3. Compile PyFleX: Go to the root folder of softgym and run `. ./prepare_1.0.sh`. After that, compile PyFleX with CMake & Pybind11 by running `. ./compile_1.0.sh` Please see the example test scripts and the bottom of `bindings/pyflex.cpp` for available APIs.
  
 ## The task
+
+<img src="./examples/Task_overview.png" alt="cover" width="500"/>
+
 The agent is supposed to slide along the rope - using an appropriate grasping force - to its tail end. The beginning of the rope is firmly attached to a point in space in the simulator.
 The goal behaviour is achieved when the gripper follows the rope and holds it close to its final end.
 
 ## SoftGym Experiments
 The environment presented in this repository allowed us to test the Reinforcement Learning agent using different sensing modalities and investigate how its behaviour
 can be boosted using visual-tactile fusion. We also performed some ablation studies to assess the influence of particular input signal.
+
+<img src="./examples/Agent_v2.png" alt="cover2" width="300"/>
 
 More details about experiments performed can be found in ([paper - TBD]()).
 
