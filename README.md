@@ -29,7 +29,7 @@ Create a conda environment and activate it: `conda env create -f environment.yml
 The agent is supposed to slide along the rope - using an appropriate grasping force - to its tail end. The beginning of the rope is firmly attached to a point in space in the simulator.
 The goal behaviour is achieved when the gripper follows the rope and holds it close to its final end.
 
-## SoftGym Experiments
+## Experiments
 The environment presented in this repository allowed us to test the Reinforcement Learning agent using different sensing modalities and investigate how its behaviour
 can be boosted using visual-tactile fusion. We also performed some ablation studies to assess the influence of particular input signal.
 
