@@ -23,7 +23,7 @@ Create a conda environment and activate it: `conda env create -f environment.yml
 3. Compile PyFleX: Go to the root folder of softgym and run `. ./prepare_1.0.sh`. After that, compile PyFleX with CMake & Pybind11 by running `. ./compile_1.0.sh` Please see the example test scripts and the bottom of `bindings/pyflex.cpp` for available APIs.
  
 ## The task
-the agent is supposed to slide along the rope - using an appropriate grasping force - to its tail end. The beginning of the rope is firmly attached to a point in space in the simulator.
+The agent is supposed to slide along the rope - using an appropriate grasping force - to its tail end. The beginning of the rope is firmly attached to a point in space in the simulator.
 The goal behaviour is achieved when the gripper follows the rope and holds it close to its final end.
 
 ## SoftGym Experiments
