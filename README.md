@@ -35,12 +35,12 @@ More details about experiments performed can be found in ([paper - TBD]()).
 
 Depending on the type of inputs and training length the observed outcome behaviour can be categorised as follows:
 
-| Image                                     | Name                                                               | Description                                                                                    |
+| Image                                     | Name                                                               | Description                                                                                                |
 |-------------------------------------------|:-------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------|
 | ![Gif](./examples/Reach_end_hold.gif)     | Hold the end                                                       | The gripper follows the DLO till its end, it stays there and holds the object. This is the goal behaviour. |
 | ![Gif](./examples/Stop_before.gif)        | Stop before                                                        | The gripper did not reach close to the end but it did not drop the ject                                    |
 | ![Gif](./examples/Reach_end_but_drop.gif) | Reach end but drop                                                 | The gripper reached the end of the DLO but failed to keep the object                                       |
-| ![Gif](./examples/Drop_before.gif)        | Drop before                                                        | he gripper dropped the DLO earlier, without reaching its end.                                              |
+| ![Gif](./examples/Drop_before.gif)        | Drop before                                                        | The gripper dropped the DLO earlier, without reaching its end.                                             |
 
    
 To have a quick view of a task (with random actions), run the following commands:
