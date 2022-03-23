@@ -53,7 +53,7 @@ To have a quick view of a task (with random actions), run the following commands
 - RopeFollow: `python examples/random_env.py --env_name RopeFollow`
 
 To have a quick check the behaviour and manually manipulate the agent's behaviour run in python interpreter:
-- RopeFollow:  `examples/random_env_manual_check.py`
+`examples/random_env_manual_check.py`
 
 Turn on the `--headless` option if you are running on a cluster machine that does not have a display environment. Otherwise you will get segmentation issues. Please refer to `softgym/registered_env.py` for the default parameters and source code files for each of these environments.
 
