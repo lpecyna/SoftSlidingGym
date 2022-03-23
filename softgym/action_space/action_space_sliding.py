@@ -20,7 +20,7 @@ class ActionToolBase(metaclass=abc.ABCMeta):
 
 
 class Picker(ActionToolBase):
-    def __init__(self, num_picker=1, picker_size=[0.0125, 0.0075], init_pos=(0., -0.1, 0.), picker_threshold=0.004, particle_radius=0.008,
+    def __init__(self, num_picker=1, picker_size=(0.0125, 0.0075), init_pos=(0., -0.1, 0.), picker_threshold=0.004, particle_radius=0.008,
                  picker_low=(-0.4, 0., -0.4), picker_high=(0.4, 0.5, 0.4), init_particle_pos=None, spring_coef=1.2, **kwargs):
         """
 
@@ -30,7 +30,6 @@ class Picker(ActionToolBase):
         """
 
         super(Picker).__init__()
-        print(picker_size)
         self.grasp = 0
         self.picker_size = picker_size
         self.picker_threshold = picker_threshold
