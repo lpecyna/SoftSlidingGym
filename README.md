@@ -1,5 +1,6 @@
-# SoftGym for DLO following
-This repository contains a new benchmark environment based on the rope flatten <a href="https://sites.google.com/view/softgym/home">SoftGym</a> environment.
+# SoftSlidingGym - environment for soft object following
+This repository contains a benchmark environment based on the rope flatten <a href="https://sites.google.com/view/softgym/home">SoftGym</a> environment.
+At the current stage, included envrionemnt allows sliding along the deformable linear object (DLO) with a two finger gripper.
 An adapted Soft Actor-Critic algorithm benchmark for this environment can be found in [SoftAgent DLO following](https://github.com/lpecyna/Softagent_rope_following).
 
 The original <a href="https://sites.google.com/view/softgym/home">SoftGym</a> is a set of benchmark environments for deformable object manipulation including tasks involving fluid, cloth and rope. It is built on top of the Nvidia FleX simulator and has standard Gym API for interaction with RL agents. A number of RL algorithms benchmarked on SoftGym can be found in <a href="https://github.com/Xingyu-Lin/softagent">SoftAgent</a>
@@ -10,7 +11,7 @@ If you are using Ubuntu 16.04 LTS and CUDA 9.2, you can follow the steps in the 
 Additional information about installation using Docker can be found on Daniel Seita blog: https://danieltakeshi.github.io/2021/02/20/softgym/.
 
 ## Instructions for Installation 
-1. This codebase is tested with Ubuntu 16.04 LTS, CUDA 9.2 and Nvidia driver version 440.64. Other versions might work but are not guaranteed, especially with a different driver version. Please use our docker for other versions.
+1. This codebase is tested with Ubuntu 16.04 LTS, CUDA 9.2 and Nvidia driver version 440.64. Other versions might work but are not guaranteed, especially with a different driver version. Please use the docker for other versions.
 
 The following command will install some necessary dependencies.
 ```
@@ -35,7 +36,7 @@ can be boosted using visual-tactile fusion. We also performed some ablation stud
 
 <img src="./examples/Agent_v2.png" alt="cover2" width="300"/>
 
-More details about experiments performed can be found in ([paper - TBD]()).
+More details about experiments performed can be found in the [paper](https://arxiv.org/abs/2204.00117).
 
 
 Depending on the type of inputs and training length the observed outcome behaviour can be categorised as follows:
@@ -60,7 +61,12 @@ Turn on the `--headless` option if you are running on a cluster machine that doe
 ## Cite
 If you find this codebase useful in your research, please consider citing:
 ```
-TBD
+@inproceedings{Pecyna2022VisualTactileMF,
+  title={Visual-Tactile Multimodality for Following Deformable Linear Objects Using Reinforcement Learning},
+  author={Leszek Pecyna and Siyuan Dong and Shan Luo},
+  journal={arXiv preprint arXiv:2204.00117},
+  year={2022}
+}
 ```
 
 ## References
