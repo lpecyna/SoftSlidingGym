@@ -1,12 +1,12 @@
 # SoftSlidingGym - environment for soft object following
 This repository contains a benchmark environment based on the rope flatten <a href="https://github.com/Xingyu-Lin/softgym">SoftGym</a> environment.
-At the current stage, included envrionemnt allows sliding along the deformable linear object (DLO) with a two finger gripper.
+At the current stage, included environment allows sliding along the deformable linear object (DLO) with a two finger gripper.
 An adapted Soft Actor-Critic algorithm benchmark for this environment can be found in [Agent for SoftSlidingGym](https://github.com/lpecyna/SoftSlidingAgent).
 
 The original <a href="https://sites.google.com/view/softgym/home">SoftGym</a> is a set of benchmark environments for deformable object manipulation including tasks involving fluid, cloth and rope. It is built on top of the Nvidia FleX simulator and has standard Gym API for interaction with RL agents. A number of RL algorithms benchmarked on SoftGym can be found in <a href="https://github.com/Xingyu-Lin/softagent">SoftAgent</a>
 
 ## Installation Using Docker
-If you are using Ubuntu 16.04 LTS and CUDA 9.2, you can follow the steps in the next section on this page for compilation. For other versions of Ubuntu or CUDA, SoftGym authors provided the pre-built Docker image and Dockerfile for running SoftGym. Please refer to the [Docker](docker/docker.md) page.
+If you are using Ubuntu 16.04 LTS and CUDA 9.2, you can follow the steps in the next section on this page for compilation. For other versions of Ubuntu or CUDA, SoftGym authors provided the pre-built Docker image and Docker file for running SoftGym. Please refer to the [Docker](docker/docker.md) page.
 
 Additional information about installation using Docker can be found on Daniel Seita blog: https://danieltakeshi.github.io/2021/02/20/softgym/.
 
