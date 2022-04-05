@@ -38,43 +38,17 @@ class RopeFollowEnv(RopeNewEnv):
             self.update_camera('default_camera', default_config['camera_params']['default_camera'])
             config['camera_params'] = deepcopy(self.camera_params)
             self.action_tool.reset([0., -1., 0.])
-            #random_pick_and_place2(pick_num=4, pick_scale=0.005)
             curr_pos = pyflex.get_positions().reshape(-1, 4)
-            #print(np.shape(curr_pos))
-            num_particles = curr_pos.shape[0]
+            #num_particles = curr_pos.shape[0]
 
             curr_pos[0, :3] += [0, 0.1, 0]
             curr_pos[0, 3] = 0
-            #x, y = np.random.random(2)*0.3-0.15
-            #curr_pos[num_particles-1, :3] += [x, 0.2, y]
-
-            #org_inv_mass = curr_pos[num_particles - 1, 3]
-            #curr_pos[num_particles-1, 3] = 0
-
 
             pyflex.set_positions(curr_pos.flatten())
-            #center_object()
             center_first()
-
-            #curr_pos[num_particles - 1, 3] = org_inv_mass
-            #center_object()
-            #pyflex.set_positions(curr_pos.flatten())
 
             random_pick_and_place2(pick_num=4, pick_scale=0.0025)
 
-            """
-            # Pick up the rope and wait to stabilize
-            for j in range(0, max_wait_step):
-                curr_pos = pyflex.get_positions()
-                curr_vel = pyflex.get_velocities()
-                pyflex.set_positions(curr_pos)
-                pyflex.set_velocities(curr_vel)
-                pyflex.step()
-                if np.alltrue(np.abs(curr_vel) < stable_vel_threshold) and j > 5:
-                    break
-            """
-
-            #center_object()
             generated_configs.append(deepcopy(config))
             print('config {}: {}'.format(i, config['camera_params']))
             generated_states.append(deepcopy(self.get_state()))
@@ -82,14 +56,12 @@ class RopeFollowEnv(RopeNewEnv):
         return generated_configs, generated_states
 
     def get_random_rope_seg_num(self):
-        return np.random.randint(30, 61)#30#np.random.randint(40, 41)
-        #return np.random.randint(45, 61)  # 30#np.random.randint(40, 41)
+        return np.random.randint(30, 61)
 
     def _reset(self):
         self.farthest = -1000
         self.stay_last10run = 0
         self.stay_last10 = 0
-        #print("Rest stay_last10run and stay_last10 to 0, as RESET")
         self.indx = 0
 
         config = self.current_config
@@ -102,22 +74,16 @@ class RopeFollowEnv(RopeNewEnv):
 
         if hasattr(self, 'action_tool'):
             curr_pos = pyflex.get_positions().reshape([-1, 4])
-            #cx, cy = self._get_center_point(curr_pos)
-            #print("Setting the cx and cy and tools space!!!!!!!")
-            #print(curr_pos[0][0])
             cx = curr_pos[0][0]+0.25
             cy = curr_pos[0][0]
             self.action_tool.reset([cx, 0.1, cy])
 
         # set reward range
-        self.reward_max = self.rope_length#0
-        self.reward_min = 0#-self.rope_length
-        #print("Rope Length:")
-        #print(self.rope_length)
+        self.reward_max = self.rope_length
+        self.reward_min = 0
         self.reward_range = self.reward_max - self.reward_min
 
-        #New:
-        self.prev_reward = 0#-self.rope_length
+        self.prev_reward = 0
         self.prev_dist = 0
         return self._get_obs()
 
@@ -137,54 +103,44 @@ class RopeFollowEnv(RopeNewEnv):
 
     def compute_reward(self, action=None, obs=None, set_prev_reward=False):
         """ Reward is the distance between the endpoints of the rope"""
-        """curr_endpoint_dist = self._get_endpoint_distance()
-        curr_distance_diff = -np.abs(curr_endpoint_dist - self.rope_length)
-        r = curr_distance_diff
-        print("reward")
-        print(r)"""
         if np.size(self.sel_points) == 0:
-            r = - 0.5 #self.prev_reward
+            r = - 0.5
         else:
             self.indx = np.mean(self.sel_points)
             conf = self.get_current_config()
             #One:
             #r = self.indx*self.rope_length/conf['segment']
-            #Second version:
 
+            #Second version:
             dist = self.indx * self.rope_length / conf['segment']
-            #print(dist - self.prev_dist)
-            r = (dist - self.prev_dist)*10# - self.rope_length
+            r = (dist - self.prev_dist)*10
             #r = r - 0.1
             self.prev_dist = dist
             if self.indx > conf['segment']-20:
                 r = r + (self.indx+20-conf['segment'])/20#*(indx+10-conf['segment'])/10
-            #print("Reward: ", r)
         self.prev_reward = r
         return r
 
     def _get_info(self):
         conf = self.get_current_config()
-        reward = self.prev_reward #  self.compute_reward()
+        reward = self.prev_reward
         self.farthest = max(self.farthest, -conf['segment'] + self.indx)
         if conf['segment'] - self.indx < 10:
-            #print("close to end (10), add 1")###############################
             self.stay_last10run = self.stay_last10run + 1
         else:
-            #print("far from end rest stay_last10run to 0")###########################
             self.stay_last10run = 0
         self.stay_last10 = max(self.stay_last10run, self.stay_last10)
-        #normalized_performance = (performance - self.reward_min) / self.reward_range
 
         end_type = [0, 0, 0, 0]
-        if conf['segment'] - self.indx < 5:# it got above 5 #need to reset
-            if np.size(self.sel_points) == 0:  # Not till horizon or self.time_step < self.horizon:TBD!!!!!!!!!
+        if conf['segment'] - self.indx < 5:  # it got above 5
+            if np.size(self.sel_points) == 0:
                 # option 2 - get to the end but fall
                 end_type[1] = 1
             else:
                 # option 1 - get to the end and stay
                 end_type[0] = 1
         else:
-            if np.size(self.sel_points) != 0:  # Till horizon or self.time_step >= self.horizon:TBD!!!!!!!!!
+            if np.size(self.sel_points) != 0:
                 # option 3
                 end_type[2] = 1
             #else (option 4) - fall on the way
@@ -194,7 +150,6 @@ class RopeFollowEnv(RopeNewEnv):
             'step_reward': reward,
             'stay_last10': self.stay_last10,
             'farthest': self.farthest,
-            #'normalized_performance': normalized_performance,
             'internal_step': self.time_step,
             'get_end_stay': end_type[0],
             'get_end_fall': end_type[1],

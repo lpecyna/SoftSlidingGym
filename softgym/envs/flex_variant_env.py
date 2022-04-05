@@ -196,18 +196,11 @@ class FlexEnv(gym.Env):
         done = False
         if self.time_step >= self.horizon:
             done = True
-            #print("DONE_HORIZON!!!!!!!!!!!!!!!!!", self.time_step)
-            #print(info)
         if self.done == True:
             done = True
-            #print("DONE!!!!!!!!!!!!!!!!!", self.time_step)
-            #print(info)
             self.done = False
         if record_continuous_video:
             info['flex_env_recorded_frames'] = frames
-
-        #print("Reward inside: ", reward)
-        #print("Obs inside: ", obs)
         return obs, reward, done, info
 
     def initialize_camera(self):

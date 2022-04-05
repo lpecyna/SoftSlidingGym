@@ -1,6 +1,6 @@
-from softgym.envs.pour_water import PourWaterPosControlEnv
-from softgym.envs.pour_water_amount import PourWaterAmountPosControlEnv
-from softgym.envs.pass_water import PassWater1DEnv
+#  from softgym.envs.pour_water import PourWaterPosControlEnv
+#  from softgym.envs.pour_water_amount import PourWaterAmountPosControlEnv
+#  from softgym.envs.pass_water import PassWater1DEnv
 from softgym.envs.rope_flatten import RopeFlattenEnv
 from softgym.envs.rope_configuration import RopeConfigurationEnv
 from softgym.envs.cloth_flatten import ClothFlattenEnv
@@ -195,9 +195,9 @@ env_arg_dict = {
 }
 
 SOFTGYM_ENVS = OrderedDict({
-    'PourWater': PourWaterPosControlEnv,
-    'PourWaterAmount': PourWaterAmountPosControlEnv,
-    'PassWater': PassWater1DEnv,
+    #  'PourWater': PourWaterPosControlEnv,
+    #  'PourWaterAmount': PourWaterAmountPosControlEnv,
+    #  'PassWater': PassWater1DEnv,
     'ClothFlatten': ClothFlattenEnv,
     'ClothFold': ClothFoldEnv,
     'ClothDrop': ClothDropEnv,

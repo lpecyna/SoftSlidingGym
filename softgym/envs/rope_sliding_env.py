@@ -8,7 +8,7 @@ from copy import deepcopy
 
 
 class RopeNewEnv(FlexEnv):
-    def __init__(self, observation_mode, action_mode, num_picker=2, horizon=75, render_mode='particle', picker_size=[0.02, 0.01, 0.04], **kwargs):
+    def __init__(self, observation_mode, action_mode, num_picker=1, horizon=75, render_mode='particle', picker_size=(0.0125, 0.0075), **kwargs):
         self.render_mode = render_mode
         self.particle_radius = 0.004*2  # rope is half of that radius (see scale)
         super().__init__(**kwargs)
@@ -18,9 +18,8 @@ class RopeNewEnv(FlexEnv):
         self.observation_mode = observation_mode
         self.action_mode = action_mode
         self.num_picker = num_picker
-
         if action_mode == 'picker':
-            self.action_tool = Picker(num_picker, picker_radius=0.02, picker_threshold=self.particle_radius/2,  # picker_size=picker_size
+            self.action_tool = Picker(num_picker, picker_size, picker_threshold=self.particle_radius/2,  # picker_size=picker_size
             particle_radius=self.particle_radius, picker_low=(-0.35, 0., -0.35), picker_high=(0.35, 0.3, 0.35))
             self.action_space = self.action_tool.action_space
         elif action_mode in ['sawyer', 'franka']:
@@ -28,7 +27,7 @@ class RopeNewEnv(FlexEnv):
 
         if observation_mode in ['key_point', 'point_cloud']:
             if observation_mode == 'key_point':
-                obs_dim = 4+2  # 2+4  # This has to be modified when changing the inputs
+                obs_dim = 4+2  # This has to be modified when changing the inputs
             else:
                 max_particles = 41
                 obs_dim = max_particles * 3
@@ -43,7 +42,6 @@ class RopeNewEnv(FlexEnv):
                                          dtype=np.float32)
 
         self.horizon = horizon
-        # print("init of rope new env done!")
 
     def get_default_config(self):
         """ Set the default config of the environment and load it to self.config """
@@ -52,7 +50,7 @@ class RopeNewEnv(FlexEnv):
             'stretchstiffness': np.random.uniform(0.8, 1.4), #0.9, #0.0005,#1.5,#0.9,
             'bendingstiffness': np.random.uniform(0.8, 2.4), #0.8, #0.8
             'radius': self.particle_radius,
-            'segment': 30,#40,
+            'segment': 30,
             'mass': 0.5,
             'scale': 0.5,
             'camera_name': 'default_camera',
@@ -66,6 +64,8 @@ class RopeNewEnv(FlexEnv):
         return config
 
     def _get_obs(self):
+        """ Get the observations, in the case of the key_point, they are angles and positions based on vision, tactile,
+        given together with kinematic (proprioceptive input)"""
         if self.observation_mode == 'cam_rgb':
             return self.get_image(self.camera_height, self.camera_width)
         if self.observation_mode == 'point_cloud':
@@ -73,71 +73,36 @@ class RopeNewEnv(FlexEnv):
             pos = np.zeros(shape=self.particle_obs_dim, dtype=np.float)
             pos[:len(particle_pos)] = particle_pos
         elif self.observation_mode == 'key_point':
-            #particle_pos = np.array(pyflex.get_positions()).reshape([-1, 4])[:, :3]
-            #keypoint_pos = particle_pos[self.key_point_indices, :3]
-            #pos = keypoint_pos.flatten()
-
-            # more_info = np.array([self.rope_length, self._get_endpoint_distance()])
-            # pos = np.hstack([more_info, pos])
-            # print("in _get_obs, pos is: ", pos)
-
             # calculate new distance:
             picker_pos = np.array(pyflex.get_shape_states()).reshape(-1, 14)[:, :3]
             particle_pos = np.array(pyflex.get_positions()).reshape(-1, 4)
             p0 = picker_pos[0].reshape((-1, 3))
             p3 = particle_pos[:, :3].reshape((-1, 3))
 
-            #OLD---------------------------------------------
-            """
-            p1 = p0 + np.array(
-                [0, 0, self.action_tool.picker_size[1]])  # if I change the orientation the added element need to be oriented
-            p2 = p0 + np.array(
-                [0, 0, -self.action_tool.picker_size[1]])  # if I change the orientation the added element need to be oriented
-            dists = np.linalg.norm(np.cross(p2 - p1, p3 - p1) / np.linalg.norm(p2 - p1), axis=1)
-            #Checking if the point projectsion is on the segment
-            l2 = np.sum((p1 - p2) ** 2)
-            t = np.sum((p3 - p1) * (p2 - p1), axis=1) / l2
-            mask = (t < np.ones(np.shape(t))) * (t > np.zeros(np.shape(t))) * (dists < 0.031 * np.ones(np.shape(t)))
-            #only this points that close and thair projectsions are inside the gripper
-            # print(mask)
-            sel_2D_points = p3[mask][:, [0, 2]]
-            self.sel_points = np.array(range(np.shape(p3)[0]))[mask]
-            """
-            #-----------------------------------------------------------
-
-            #NEW--------------------------------------------------------
-            idx = self.action_tool.get_hold_idx(p0, p3) # NEW
+            idx = self.action_tool.get_hold_idx(p0, p3)
             sel_2D_points = p3[idx][:, [0, 2]]
             self.sel_points = idx
-            #-----------------------------------------------------------
 
-            #print(mask)
-            #print(self.sel_points)
-            #print(sel_2D_points)
             if np.shape(sel_2D_points)[0] > 1:
                 coef = np.polyfit(sel_2D_points[:, 0], sel_2D_points[:, 1], 1)
                 yl = coef[0] * p0[0, 0] + coef[1]
                 Y = yl - p0[0, 2] #+ 0.002*np.random.normal(0, 1-self.action_tool.grasp) #it was 0.01
                 th = -np.arctan(coef[0]) #+ 0.5*np.random.normal(0, 1-self.action_tool.grasp)
                 self.done = False
-                #print("Position y: ", Y, ", Angle theta: ", th*180/np.pi)
             else:
                 Y = 0
                 th = 0
                 self.done = True
-                #print("DONE!....")
-            #pos = np.concatenate((np.array([Y, th]), picker_pos[0], [self.action_tool.grasp]))
 
+            # Vision:
             # finding particle that is at the edge of the griper os its position is gripper position plus radius of gripper
-            # and particle in x (0) direction. Nominal dystance
-
-            #Vision:
+            # and particle in x (0) direction. Nominal distance
             if self.done == True:
                 full_vision = np.array([0, 0, 0, 0])
             else:
                 P_tact_side1 = p0[0][0]+self.action_tool.picker_size[0] + 0.25*self.particle_radius
                 conf = self.get_current_config()
-                Edge1_idx = idx[-1]# + 1
+                Edge1_idx = idx[-1]
                 p_right_idx = Edge1_idx
                 p_right2D = p3[p_right_idx][[0, 2]]
                 for j in range(10):
@@ -166,13 +131,10 @@ class RopeNewEnv(FlexEnv):
                     coef_out1 = np.polyfit(ang_2D_points[:, 0], ang_2D_points[:, 1], 1)
                     ang1 = -np.arctan(coef_out1[0])
                 full_vision = np.array([is_out, out_pos1, ang1_conf, ang1])
-                #print("Tactile Y: ", Y, "th: ", th)
-                #print("full_vision: ", full_vision)
 
 
             # Vision before!!!!!!!!!!!!!!!:
-            do_left_v = True
-            """
+            do_left_v = False
             if do_left_v == True:
                 if self.done == True:
                     full_vision_l = np.array([0, 0, 0, 0])
@@ -185,7 +147,6 @@ class RopeNewEnv(FlexEnv):
                     p_left2D = p3[p_left_idx][[0, 2]] # 2d (x,y) projection of most right hold point
                     for j in range(10):
                         curr_p = p3[idx[0] - j, 0] # going to the right (10 steps) - getting x coordinate
-                        # print("J: ", j, " and idx+j: ", idx[-1]+j, " of ",conf['segment'])
                         # curr_p-P_edge1 # loop till this negative
                         if curr_p - P_tact_side1_l < 0 or idx[0] - j - 1 < 0:  # till the particle is on the side of the capsule (or final particle), if further than start - finding real edge
                             Edge1_idx_l = idx[0] - j
@@ -216,9 +177,7 @@ class RopeNewEnv(FlexEnv):
                         ang1_l = -np.arctan(coef_out1_l[0])
 
                     full_vision_l = np.array([is_out_l, out_pos1_l, ang1_conf_l, ang1_l])
-            """
-            #pos = full_vision_l
-            #pos = full_vision
+
             pos = np.concatenate((np.array([Y, th]), picker_pos[0], [self.action_tool.grasp], np.array(full_vision)))
 
         return pos
