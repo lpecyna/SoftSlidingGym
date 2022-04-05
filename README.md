@@ -1,5 +1,5 @@
 # SoftSlidingGym - environment for soft object following
-This repository contains a benchmark environment based on the rope flatten <a href="https://sites.google.com/view/softgym/home">SoftGym</a> environment.
+This repository contains a benchmark environment based on the rope flatten <a href="https://github.com/Xingyu-Lin/softgym">SoftGym</a> environment.
 At the current stage, included envrionemnt allows sliding along the deformable linear object (DLO) with a two finger gripper.
 An adapted Soft Actor-Critic algorithm benchmark for this environment can be found in [SoftAgent DLO following](https://github.com/lpecyna/Softagent_rope_following).
 
