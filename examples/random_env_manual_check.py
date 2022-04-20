@@ -30,11 +30,11 @@ if not env_kwargs['use_cached_states']:
 env = normalize(SOFTGYM_ENVS[args.env_name](**env_kwargs))
 env.reset()
 frames = [env.get_image(args.img_size, args.img_size)]
-action = np.zeros(3)
-action[0] = 0.1
-for i in range(5):
+#action = np.zeros(3)
+#action[0] = 0.1
+#for i in range(5):
     # _, _, _, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
-    obs, reward, done, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
+    #obs, reward, done, info = env.step(action, record_continuous_video=True, img_size=args.img_size)
     # print("Reward external:")
     # print(reward)
 
