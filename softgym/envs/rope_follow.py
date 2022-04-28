@@ -41,11 +41,11 @@ class RopeFollowEnv(RopeNewEnv):
             curr_pos = pyflex.get_positions().reshape(-1, 4)
             #num_particles = curr_pos.shape[0]
 
-            curr_pos[0, :3] += [0, 0.1, 0]
+            curr_pos[0, :3] += [0, 0.1, 0] #Holding one end higher
             curr_pos[0, 3] = 0
 
             pyflex.set_positions(curr_pos.flatten())
-            center_first()
+            center_first()#shifting appropriatly so that there is space to move right
 
             random_pick_and_place2(pick_num=4, pick_scale=0.0025)
 
