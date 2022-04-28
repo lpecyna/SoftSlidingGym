@@ -4,10 +4,10 @@ import pickle
 import os.path as osp
 import pyflex
 from copy import deepcopy
-from softgym.envs.cloth_env_var import ClothEnv
+from softgym.envs.cloth_sliding_env import ClothSlidingEnv
 
 
-class ClothFollowEnv(ClothEnv):
+class ClothFollowEnv(ClothSlidingEnv):
     def __init__(self, cached_states_path='cloth_fold_init_states.pkl', **kwargs):
         self.start_height = 0.8
         kwargs['cached_states_path'] = 'cloth_fold_drop_init_states.pkl'

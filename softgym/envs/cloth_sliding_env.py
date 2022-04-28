@@ -7,7 +7,7 @@ from softgym.action_space.robot_env import RobotBase
 from copy import deepcopy
 
 
-class ClothEnv(FlexEnv):
+class ClothSlidingEnv(FlexEnv):
     def __init__(self, observation_mode, action_mode, num_picker=1, render_mode='particle', picker_size=(0.0125, 0.0075), picker_radius=0.05, particle_radius=0.00625, **kwargs):
         self.render_mode = render_mode
         self.action_mode = action_mode
