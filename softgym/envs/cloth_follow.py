@@ -4,14 +4,15 @@ import pickle
 import os.path as osp
 import pyflex
 from copy import deepcopy
-from softgym.envs.cloth_fold_var import ClothFoldEnv
+from softgym.envs.cloth_env_var import ClothEnv
 
 
-class ClothFollowEnv(ClothFoldEnv):
-    def __init__(self, **kwargs):
+class ClothFollowEnv(ClothEnv):
+    def __init__(self, cached_states_path='cloth_fold_init_states.pkl', **kwargs):
         self.start_height = 0.8
         kwargs['cached_states_path'] = 'cloth_fold_drop_init_states.pkl'
         super().__init__(**kwargs)
+        self.get_cached_configs_and_states(cached_states_path, self.num_variations)
 
     def _get_drop_point_idx(self):
         return self._get_key_point_idx()[:2]
@@ -151,3 +152,49 @@ class ClothFollowEnv(ClothFoldEnv):
         curr_pos[:, 2] = yy.flatten()
         curr_pos[:, 1] = xx.flatten() - np.min(xx) + height_low
         return curr_pos
+
+    def _get_info(self):
+        # Duplicate of the compute reward function!
+        pos = pyflex.get_positions()
+        pos = pos.reshape((-1, 4))[:, :3]
+        pos_group_a = pos[self.fold_group_a]
+        pos_group_b = pos[self.fold_group_b]
+        pos_group_b_init = self.init_pos[self.fold_group_b]
+        group_dist = np.mean(np.linalg.norm(pos_group_a - pos_group_b, axis=1))
+        fixation_dist = np.mean(np.linalg.norm(pos_group_b - pos_group_b_init, axis=1))
+        performance = -group_dist - 1.2 * fixation_dist
+        performance_init = performance if self.performance_init is None else self.performance_init  # Use the original performance
+        info = {
+            'performance': performance,
+            'normalized_performance': (performance - performance_init) / (0. - performance_init),
+            'neg_group_dist': -group_dist,
+            'neg_fixation_dist': -fixation_dist
+        }
+        if 'qpg' in self.action_mode:
+            info['total_steps'] = self.action_tool.total_steps
+        return info
+
+    def _step(self, action):
+        config = self.get_current_config()
+        self.action_tool.step(action, config)
+        if self.action_mode in ['sawyer', 'franka']:
+            print(self.action_tool.next_action)
+            pyflex.step(self.action_tool.next_action)
+        else:
+            pyflex.step()
+
+    def compute_reward(self, action=None, obs=None, set_prev_reward=False):
+        """
+        The particles are splitted into two groups. The reward will be the minus average eculidean distance between each
+        particle in group a and the crresponding particle in group b
+        :param pos: nx4 matrix (x, y, z, inv_mass)
+        """
+        pos = pyflex.get_positions()
+        pos = pos.reshape((-1, 4))[:, :3]
+        pos_group_a = pos[self.fold_group_a]
+        pos_group_b = pos[self.fold_group_b]
+        pos_group_b_init = self.init_pos[self.fold_group_b]
+        curr_dist = np.mean(np.linalg.norm(pos_group_a - pos_group_b, axis=1)) + \
+                    1.2 * np.mean(np.linalg.norm(pos_group_b - pos_group_b_init, axis=1))
+        reward = -curr_dist
+        return reward
