@@ -96,7 +96,7 @@ class Picker(ActionToolBase):
         curr_pos = pyflex.get_positions().reshape(-1, 4)
 
         if curr_pos[0, 1] > self.picker_size[1]:
-            centered_picker_pos = curr_pos[0, 0:3] + [[-0.008, -0.019, 0], [-0.008, 0.0145, 0]]
+            centered_picker_pos = curr_pos[0, 0:3] + [[0.018, -0.019, 0], [0.018, 0.0145, 0]]
 
         if curr_pos[0, 1] > self.picker_size[1]:
             new = [0, 0, 0, -1]
@@ -109,10 +109,12 @@ class Picker(ActionToolBase):
         self.particle_inv_mass = pyflex.get_positions().reshape(-1, 4)[:, 3]
 
     @staticmethod
-    def _get_pos():
+    def _get_pos(config):
         """ Get the current pos of the pickers and the particles, along with the inverse mass of each particle """
         picker_pos = np.array(pyflex.get_shape_states()).reshape(-1, 14)
-        particle_pos = np.array(pyflex.get_positions()).reshape(-1, 4)
+        cloth_dimx, cloth_dimy = config['ClothSize']
+        particle_pos = np.array(pyflex.get_positions()).reshape(cloth_dimx, cloth_dimy, 4)
+        #particle_pos = np.array(pyflex.get_positions()).reshape(-1, 4)
         return picker_pos[:, :3], particle_pos
 
     @staticmethod
@@ -141,13 +143,16 @@ class Picker(ActionToolBase):
 
         pick_flag = action[:, 2] > 0.5  # checking if grip (h) is higher than 0.5
 
-        picker_pos, particle_pos = self._get_pos()
+        picker_pos, particle_pos = self._get_pos(config)
         new_picker_pos, new_particle_pos = picker_pos.copy(), particle_pos.copy()
 
         # Un-pick the particles
         for i in range(self.num_picker):
+            raw_index = 0
             if self.picked_particles[i] is not None:  # when it is not holding and there are some particles
-                new_particle_pos[self.picked_particles[i], 3] = self.particle_inv_mass[self.picked_particles[i]]  # Revert the mass
+                for j in range(len(self.picked_particles[i])):
+                    row_index = self.picked_particles[i][j][0]
+                    new_particle_pos[row_index, self.picked_particles[i][j][1], 3] = self.particle_inv_mass[self.picked_particles[i][j][1]]  # Revert the mass
                 self.picked_particles[i] = None
         # Pick new particles and update the mass and the positions
         action_real = np.zeros([np.shape(action)[0], 3])
@@ -161,71 +166,112 @@ class Picker(ActionToolBase):
             new_picker_pos[i+1, :] = self._apply_picker_boundary(picker_pos[i+1, :] + action_real[i, :3])###########
             if pick_flag[i]:
                 #print("YES Pick")
+                #print(self.picked_particles)
                 if self.picked_particles[i] is None:
-                    idx = self.get_hold_idx(picker_pos[i].reshape((-1, 3)), particle_pos[:, :3].reshape((-1, 3)))
-                    #distance to axes:
-                    dist_ax = abs(particle_pos[idx, 0]-picker_pos[i].reshape((-1, 3))[0, 0])
+                    self.picked_particles[i] = []
+                    for j in range(4):  # 5 rows of particles from cloth edge are checked if particles are held
+                        row_index = j
+                        idx = self.get_hold_idx(picker_pos[i].reshape((-1, 3)), particle_pos[row_index, :, :3].reshape((-1, 3)))
+                        #print(idx)
+                        #distance to axes:
+                        dist_ax = abs(particle_pos[row_index, idx, 0]-picker_pos[i].reshape((-1, 3))[0, 0])
+                        #print(dist_ax)
 
-                    if idx.shape[0] > 0:
-                        pick_id, pick_height = None, None
-                        for j in range(idx.shape[0]):
-                            if idx[j] not in self.picked_particles and idx[j] != 0 and (pick_id is None or dist_ax[j] < min_dist_ax):# should be one that is closest to the centre?
-                                pick_id = idx[j]
-                                min_dist_ax = dist_ax[j]
-                        if pick_id is not None:
-                            self.picked_particles[i] = int(pick_id)
+                        if idx.shape[0] > 0:
+                            pick_id, pick_height = None, None
+                            for j in range(idx.shape[0]):
+                                #if idx[j] not in self.picked_particles and idx[j] != 0 and (pick_id is None or dist_ax[j] < min_dist_ax):# should be one that is closest to the centre?
+                                if idx[j] != 0 and (pick_id is None or dist_ax[j] < min_dist_ax):  # should be one that is closest to the centre?
+                                    pick_id = idx[j]
+                                    min_dist_ax = dist_ax[j]
+                            if pick_id is not None:
+                                self.picked_particles[i].append([row_index, int(pick_id)])
+                        #print("PICKED particles:")
+                        #print(self.picked_particles)
 
 
                 if self.picked_particles[i] is not None:
-                    # TODO1 The position of the particle needs to be updated such that it is close to the picker particle
-                    new_particle_pos[self.picked_particles[i], :3] = particle_pos[self.picked_particles[i], :3] + new_picker_pos[i, :] - picker_pos[i,
-                                                                                                                                         :]
-                    new_particle_pos[self.picked_particles[i], 3] = max(4.5 - 5 * max(0.5, action[0, 2]), 0)
+                    for j in range(len(self.picked_particles[i])):
+                        row_index = self.picked_particles[i][j][0]
+                        #print("Row: ",row_index)
+                        #print("particle number:", self.picked_particles[i][j][1])
+                        # TODO1 The position of the particle needs to be updated such that it is close to the picker particle
+                        new_particle_pos[row_index, self.picked_particles[i][j][1], :3] = particle_pos[row_index, self.picked_particles[i][j][1], :3] + new_picker_pos[i, :] - picker_pos[i,
+                                                                                                                                             :]
+                        new_particle_pos[row_index, self.picked_particles[i][j][1], 3] = max(4.5 - 5 * max(0.5, action[0, 2]), 0)
 
 
         # check for e.g., rope, the picker is not dragging the particles too far away that violates the actual physicals constraints.
-        """
+
         if self.picked_particles[0] is not None:
-            i = self.picked_particles[0]
-            violated = False
-            if i > 0:
-                now_distance = np.linalg.norm(new_particle_pos[i, :3] -
-                                          new_particle_pos[i-1, :3])
+            if len(self.picked_particles[0]) > 1:
+                radius = 0.00625#*1.2
+                cloth_dimx, cloth_dimy = config['ClothSize']
+                #j = 0
+                i = self.picked_particles[0][0][1]
+                direction = np.linalg.norm(new_particle_pos[0, i, :3] -
+                              particle_pos[0, 0, :3]) - np.linalg.norm(particle_pos[0, i, :3] -
+                              particle_pos[0, 0, :3])
+                #print("Direction: ", direction)
+                if direction > 0:
+                    for j in range(len(self.picked_particles[0])):
+                        i = self.picked_particles[0][j][1]
+                        row_index = self.picked_particles[0][j][0]
+                        #print("DISTANCE")
+                        #print(i)
+                        violated = False
+                        if i > 0:
+                            now_distance = np.linalg.norm(new_particle_pos[row_index,i, :3] -
+                                                      new_particle_pos[row_index,i-1, :3])
+                            #print("Distance!!: ", now_distance)
+                            if now_distance > 2*2.5*0.5*radius:
+                                violated = True
 
-                if now_distance > 2.5*0.5*config['radius']:
-                    violated = True
-            if i < config['segment']:
-                now_distance = np.linalg.norm(new_particle_pos[i, :3] -
-                                              new_particle_pos[i + 1, :3])
+                            if row_index > 0:
+                                now_distance = np.linalg.norm(new_particle_pos[row_index, i, :3] -
+                                                              new_particle_pos[row_index - 1, i - 1, :3])
+                                if now_distance > np.sqrt(2)*2 * 2.5 * 0.5 * radius:
+                                    violated = True
 
-                if now_distance > 2.5*0.5*config['radius']:
-                    violated = True
-            if violated:
-                new_picker_pos = picker_pos.copy()
-                new_particle_pos[i, :3] = particle_pos[i, :3].copy()
+                            if row_index < cloth_dimx:
+                                now_distance = np.linalg.norm(new_particle_pos[row_index, i, :3] -
+                                                              new_particle_pos[row_index + 1, i - 1, :3])
+                                if now_distance > np.sqrt(2)*2 * 2.5 * 0.5 * radius:
+                                    violated = True
 
-        if self.init_particle_pos is not None:
-            picked_particle_idices = []
-            active_picker_indices = []
-            for i in range(self.num_picker):
-                if self.picked_particles[i] is not None:
-                    picked_particle_idices.append(self.picked_particles[i])
-                    active_picker_indices.append(i)
+                        if i < cloth_dimy: # that might be not necessary
+                            now_distance = np.linalg.norm(new_particle_pos[row_index, i, :3] -
+                                                          new_particle_pos[row_index, i + 1, :3])
+                            if now_distance > 2*2.5*0.5*radius:
+                                violated = True
 
-            l = len(picked_particle_idices)
-            for i in range(l):
-                for j in range(i + 1, l):
-                    init_distance = np.linalg.norm(self.init_particle_pos[picked_particle_idices[i], :3] -
-                                                   self.init_particle_pos[picked_particle_idices[j], :3])
-                    now_distance = np.linalg.norm(new_particle_pos[picked_particle_idices[i], :3] -
-                                                  new_particle_pos[picked_particle_idices[j], :3])
-                    if now_distance >= init_distance * self.spring_coef:  # if dragged too long, make the action has no effect; revert it
-                        new_picker_pos[active_picker_indices[i], :] = picker_pos[active_picker_indices[i], :].copy()
-                        new_picker_pos[active_picker_indices[j], :] = picker_pos[active_picker_indices[j], :].copy()
-                        new_particle_pos[picked_particle_idices[i], :3] = particle_pos[picked_particle_idices[i], :3].copy()
-                        new_particle_pos[picked_particle_idices[j], :3] = particle_pos[picked_particle_idices[j], :3].copy()
+
+                    if violated:# and action_real[0, 0] >= 0:
+                        new_picker_pos = picker_pos.copy()
+                        new_particle_pos[row_index, i, :3] = particle_pos[row_index, i, :3].copy()
+
+        # if self.init_particle_pos is not None:
+        #     picked_particle_idices = []
+        #     active_picker_indices = []
+        #     for i in range(self.num_picker):
+        #         if self.picked_particles[i] is not None:
+        #             picked_particle_idices.append(self.picked_particles[i])
+        #             active_picker_indices.append(i)
+        #
+        #     l = len(picked_particle_idices)
+        #     for i in range(l):
+        #         for j in range(i + 1, l):
+        #             init_distance = np.linalg.norm(self.init_particle_pos[picked_particle_idices[i], :3] -
+        #                                            self.init_particle_pos[picked_particle_idices[j], :3])
+        #             now_distance = np.linalg.norm(new_particle_pos[picked_particle_idices[i], :3] -
+        #                                           new_particle_pos[picked_particle_idices[j], :3])
+        #             if now_distance >= init_distance * self.spring_coef:  # if dragged too long, make the action has no effect; revert it
+        #                 new_picker_pos[active_picker_indices[i], :] = picker_pos[active_picker_indices[i], :].copy()
+        #                 new_picker_pos[active_picker_indices[j], :] = picker_pos[active_picker_indices[j], :].copy()
+        #                 new_particle_pos[picked_particle_idices[i], :3] = particle_pos[picked_particle_idices[i], :3].copy()
+        #                 new_particle_pos[picked_particle_idices[j], :3] = particle_pos[picked_particle_idices[j], :3].copy()
         
-        """
+
         self._set_pos(new_picker_pos, new_particle_pos)
 
     def get_hold_idx(self, picker_pos, particle_pos):
